@@ -1,0 +1,21 @@
+{
+  "name": "reflect-project",
+  "version": "1.0.0",
+  "description": "",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "truffle test ./test/main_test.js ./test/mint_test.js",
+    "test_main": "truffle test ./test/main_test.js",
+    "test_mint": "truffle test ./test/mint_test.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@openzeppelin/contracts": "^3.1.0",
+    "@truffle/hdwallet-provider": "^1.4.1",
+    "bignumber.js": "8.0.2"
+  }
+}
