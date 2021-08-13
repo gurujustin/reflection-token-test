@@ -42,6 +42,8 @@ contract DappToken is IERC20 {
     uint256 private _redistributed;
 
     uint256 fee;
+
+    uint256 pointMultiplier = 10 ** 18;
     
     mapping (address => uint256) private _balances;
     mapping (address => mapping(address => uint256)) private _allowances;
@@ -80,7 +82,7 @@ contract DappToken is IERC20 {
         if(_blackListed[user]){return _balances[user];}
         
         uint256 unclaimed = _redistributionValue - _claimedRedistribution[user];
-        uint256 share = unclaimed * _balances[user] / (_totalSupply - _blackListedAmount);
+        uint256 share = unclaimed * _balances[user] / pointMultiplier;
         
         return _balances[user] + share;
     }
@@ -151,7 +153,7 @@ contract DappToken is IERC20 {
         
         if (!_isExcluded[from]) {
             fee = amount * 5 / 100;
-            _redistributionValue += fee;
+            _redistributionValue += ( fee * pointMultiplier / _totalSupply - _blackListedAmount );
         }
         
         _balances[to] += amount - fee;
@@ -165,7 +167,7 @@ contract DappToken is IERC20 {
     function claimRewards(address user) internal {
         if(_blackListed[user]){return;}
         uint256 unclaimed = _redistributionValue - _claimedRedistribution[user];
-        uint256 share = unclaimed * _balances[user] / (_totalSupply - _blackListedAmount);
+        uint256 share = unclaimed * _balances[user] / pointMultiplier;
         
         if(share > 0){
             _balances[user] += share;
