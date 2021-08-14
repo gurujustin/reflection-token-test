@@ -79,11 +79,11 @@ contract DappToken is IERC20 {
 
     function balanceOf(address user) public view override returns (uint256) {
         
-        if(_blackListed[user]){return _balances[user];}
-        
         uint256 unclaimed = _redistributionValue - _claimedRedistribution[user];
         uint256 share = unclaimed * _balances[user] / pointMultiplier;
-        
+        if(_blackListed[user] && unclaimed == 0) {
+            return _balances[user];
+        }
         return _balances[user] + share;
     }
 
@@ -130,8 +130,10 @@ contract DappToken is IERC20 {
     
     function blackList(address user) external override {
         require(msg.sender == _owner);
-        _blackListedAmount = _balances[user];
-        _blackListed[user] = true;
+        if (!_blackListed[user]) {
+            _blackListedAmount += _balances[user];
+            _blackListed[user] = true;
+        }
     }
 
     function _approve(address owner, address spender, uint256 amount) internal {
@@ -153,7 +155,7 @@ contract DappToken is IERC20 {
         
         if (!_isExcluded[from]) {
             fee = amount * 5 / 100;
-            _redistributionValue += ( fee * pointMultiplier / _totalSupply - _blackListedAmount );
+            _redistributionValue += ( fee * pointMultiplier / (_totalSupply - _blackListedAmount) );
         }
         
         _balances[to] += amount - fee;

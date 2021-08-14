@@ -80,4 +80,42 @@ contract('REFLECT.sol', async (accounts) => {
 
   });
   
+  it(`7.1) Check if blacklist is working properly.`, async function () {
+
+    // Get balance of wallet B address
+    let bSupply = await config.reflect.balanceOf.call(config.testAddresses[1], {from: config.owner});
+
+    // send 10% of wallet B to Wallet D and Wallet E
+    await config.reflect.transfer(config.testAddresses[3], bSupply * 0.1, {from: config.testAddresses[1]});
+    await config.reflect.transfer(config.testAddresses[4], bSupply * 0.1, {from: config.testAddresses[1]});
+
+    // blacklist wallet D
+    await config.reflect.blackList(config.testAddresses[3], {from: config.owner});
+
+    // balance of wallet D and E
+    let dSupply = await config.reflect.balanceOf.call(config.testAddresses[3], {from: config.owner});
+    let eSupply = await config.reflect.balanceOf.call(config.testAddresses[4], {from: config.owner});
+    console.log('Balance of Wallet D', dSupply.toString())
+    console.log('Balance of Wallet E', eSupply.toString())
+    assert.equal(dSupply.toString(), eSupply.toString(), "Balance of wallet D should be same as balance of wallet E.");
+
+  });
+
+  it(`7.2) Check if blacklist is working properly.`, async function () {
+
+    // Get balance of wallet B address
+    let bSupply = await config.reflect.balanceOf.call(config.testAddresses[1], {from: config.owner});
+
+    // send 10% of wallet B to Wallet D and Wallet E
+    await config.reflect.transfer(config.testAddresses[3], bSupply * 0.1, {from: config.testAddresses[1]});
+    await config.reflect.transfer(config.testAddresses[4], bSupply * 0.1, {from: config.testAddresses[1]});
+
+    // balance of wallet D and E
+    let dSupply = await config.reflect.balanceOf.call(config.testAddresses[3], {from: config.owner});
+    let eSupply = await config.reflect.balanceOf.call(config.testAddresses[4], {from: config.owner});
+    console.log('Balance of Wallet D', dSupply.toString())
+    console.log('Balance of Wallet E', eSupply.toString())
+    assert.notEqual(dSupply.toString(), eSupply.toString(), "Balance of wallet D should be different from balance of wallet E.");
+
+  });
 });
