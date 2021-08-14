@@ -115,7 +115,7 @@ contract('REFLECT.sol', async (accounts) => {
     let eSupply = await config.reflect.balanceOf.call(config.testAddresses[4], {from: config.owner});
     console.log('Balance of Wallet D', dSupply.toString())
     console.log('Balance of Wallet E', eSupply.toString())
-    assert.notEqual(dSupply.toString(), eSupply.toString(), "Balance of wallet D should be different from balance of wallet E.");
+    assert.isBelow(dSupply.toNumber(), eSupply.toNumber(), "Balance of wallet D should be different from balance of wallet E.");
 
   });
 });

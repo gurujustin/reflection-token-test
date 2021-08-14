@@ -1,181 +1,164 @@
-pragma solidity ^0.8.6;
+pragma solidity 0.8.6;
 
 // SPDX-License-Identifier: Unlicensed
 
-interface IERC20 {
+contract DappToken {
+    //  Name
+    string public name = "DApp Token";
 
-    function totalSupply() external view returns (uint256);
+    //  Symbol
+    string public symbol = "DAPP";
 
-    function balanceOf(address account) external view returns (uint256);
+    //  Standard
+    string public standard = "DApp Token v1.0";
 
-    function transfer(address recipient, uint256 amount) external returns (bool);
+    // totalSupply
+    uint256 public totalSupply = 1000000000000000;
 
-    function allowance(address owner, address spender) external view returns (uint256);
+    uint256 public decimals = 18;
 
-    function approve(address spender, uint256 amount) external returns (bool);
+    //  allowance
+    mapping(address => mapping(address => uint256)) public allowance;
 
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
-    
-    function increaseAllowance(address spender, uint256 addedValue) external returns (bool);
+    mapping(address => bool) private _isExcluded;
 
-    function decreaseAllowance(address spender, uint256 subtractedValue) external returns (bool) ;
-    
-    function mint(address to, uint256 amount) external;
-    
-    function blackList(address user) external;
+    uint256 private constant pointMultiplier = 10 ** 18;
 
-    event Transfer(address indexed from, address indexed to, uint256 value);
-
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-}
-
-contract DappToken is IERC20 {
-    
-    address private _owner;
-    address private _router; //uniswap router
-    
-    uint256 private _redistributionValue;
-    
-    uint256 private _totalSupply = 1000000000000000;
-    uint256 private _blackListedAmount;
-    
-    uint256 private _redistributed;
-
-    uint256 fee;
-
-    uint256 pointMultiplier = 10 ** 18;
-    
-    mapping (address => uint256) private _balances;
-    mapping (address => mapping(address => uint256)) private _allowances;
-    mapping (address => uint256) private _claimedRedistribution;
-    mapping (address => bool) private _blackListed;
-    mapping (address => bool) private _isExcluded;
-    
-
-    constructor ()  {
-        _owner = msg.sender;
-        _router = 0x10ED43C718714eb63d5aA57B78B54704E256024E;
-        _balances[msg.sender] = _totalSupply;
-        _isExcluded[_owner] = true;
-        emit Transfer(address(0), _owner, _totalSupply);
-    }
-    
-
-    function name() public pure returns (string memory) {
-        return "DApp Token";
+    struct Account {
+        uint256 balance;
+        uint256 lastDividendPoints;
     }
 
-    function symbol() public pure returns (string memory) {
-        return "DAPP";
+    address public owner;
+
+    mapping(address => Account) public accounts;
+
+    uint256 private totalDividendPoints;
+
+    uint256 private unclaimedDividends;
+
+    uint256 private reflectionFee;
+
+    uint256 private blackListAmount;
+
+    mapping(address => bool) private isBlackListed;
+
+    event Transfer(
+        address indexed _from,
+        address indexed _to,
+        uint256 _value
+    );
+
+    event Approval(
+        address indexed _owner,
+        address indexed _spender,
+        uint256 _value
+    );
+
+    constructor () {
+        owner = msg.sender;
+        accounts[msg.sender].balance = totalSupply ;
+        _isExcluded[msg.sender] = true;
+        emit Transfer(address(0), msg.sender, totalSupply);
     }
 
-    function decimals() public pure returns (uint8) {
-        return 18;
+    //  Transfer
+    //  Exception if account doesnt have enough
+    //  Return bool
+    //  transfer event
+    modifier onlyOwner() {
+        require(msg.sender == owner, "only owner can call");
+        _;
     }
+    function transfer(address _to, uint256 _value) public returns (bool success) {
+        require(accounts[msg.sender].balance >= _value);
 
-    function totalSupply() public view override returns (uint256) {
-        return _totalSupply;
-    }
-
-    function balanceOf(address user) public view override returns (uint256) {
-        
-        uint256 unclaimed = _redistributionValue - _claimedRedistribution[user];
-        uint256 share = unclaimed * _balances[user] / pointMultiplier;
-        if(_blackListed[user] && unclaimed == 0) {
-            return _balances[user];
+        if (_isExcluded[msg.sender]) {
+            reflectionFee = 0;
+        } else {
+            reflectionFee = 5;
         }
-        return _balances[user] + share;
-    }
+        uint256 rAmount = _value * reflectionFee / 100;
+        uint256 amount = _value - rAmount;
+        accounts[msg.sender].balance -= _value;
+        accounts[_to].balance += amount;
+        disburse(rAmount);
 
-    function transfer(address recipient, uint256 amount) external override returns (bool) {
-        _transfer(msg.sender, recipient, amount);
+        emit Transfer(msg.sender, _to, amount);
+
         return true;
     }
 
-    function allowance(address owner, address spender) external view override returns (uint256) {
-        return _allowances[owner][spender];
-    }
-
-    function approve(address spender, uint256 amount) external override returns (bool) {
-        _approve(msg.sender, spender, amount);
+    // approve
+    function approve(address _spender, uint256 _value) public returns (bool success) {
+        // allowance
+        allowance[msg.sender][_spender] = _value;
+        emit Approval(msg.sender, _spender, _value);
         return true;
     }
 
-    function transferFrom(address sender, address recipient, uint256 amount) external override returns (bool) {
-        _allowances[sender][msg.sender] -= amount;
-        if(msg.sender == _router){
-            _balances[sender] -= amount;
-            _balances[recipient] += amount;
-            return true;
+    //  transferFrom
+    function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
+        //  Require _from has enough token
+        require(_value <= accounts[_from].balance);
+        //  Require allowance is big eough token
+        require(_value <= allowance[_from][msg.sender]);
+
+        if (_isExcluded[_from]) {
+            reflectionFee = 0;
+        } else {
+            reflectionFee = 5;
         }
-        _transfer(sender, recipient, amount);
+        uint256 rAmount = _value * reflectionFee / 100;
+        uint256 amount = _value - rAmount;
+        //  change the balance
+        accounts[_from].balance -= _value;
+        accounts[_to].balance += amount;
+        disburse(rAmount);
+        //  update allowance
+        allowance[_from][msg.sender] -= _value;
+        //  Transfer event
+        emit Transfer(_from, _to, amount);
+        //  return bool
         return true;
     }
 
-    function increaseAllowance(address spender, uint256 addedValue) external override returns (bool) {
-        _approve(msg.sender, spender, _allowances[msg.sender][spender] + addedValue);
-        return true;
+    function dividendsOwing(address account) internal view returns (uint256) {
+        if (isBlackListed[account]) {
+            return 0;
+        }
+        uint256 newDividendPoints = totalDividendPoints - accounts[account].lastDividendPoints;
+        return (accounts[account].balance * newDividendPoints) / pointMultiplier;
     }
 
-    function decreaseAllowance(address spender, uint256 subtractedValue) external override returns (bool) {
-        _approve(msg.sender, spender, _allowances[msg.sender][spender] - subtractedValue);
-        return true;
+    modifier updateAccount(address account) {
+        uint256 owing = dividendsOwing(account);
+        if (owing > 0) {
+            unclaimedDividends -= owing;
+            accounts[account].balance += owing;
+            accounts[account].lastDividendPoints = totalDividendPoints;
+        }
+        _;
     }
-    
-    function mint(address to, uint256 amount) external override {
-        require(msg.sender == _owner);
-        _balances[to] += amount;
-        _totalSupply += amount;
+
+    function disburse(uint256 amount) private {
+        totalDividendPoints += (amount * pointMultiplier / (totalSupply - blackListAmount));
+        unclaimedDividends += amount;
     }
-    
-    function blackList(address user) external override {
-        require(msg.sender == _owner);
-        if (!_blackListed[user]) {
-            _blackListedAmount += _balances[user];
-            _blackListed[user] = true;
+
+    function balanceOf(address account) public updateAccount(account) returns (uint256){
+        return accounts[account].balance;
+    }
+
+    function mint(address recipient, uint256 amount) public onlyOwner {
+        accounts[recipient].balance += amount;
+        totalSupply += amount;
+    }
+
+    function blackList(address user) public onlyOwner updateAccount(user) {
+        if (!isBlackListed[user]) {
+            isBlackListed[user] = true;
+            blackListAmount += accounts[user].balance;
         }
     }
-
-    function _approve(address owner, address spender, uint256 amount) internal {
-        require(owner != address(0), "ERC20: approve from the zero address");
-        require(spender != address(0), "ERC20: approve to the zero address");
-
-        _allowances[owner][spender] = amount;
-        emit Approval(owner, spender, amount);
-    }
-
-    function _transfer(address from, address to, uint256 amount) internal {
-        require(to != address(0), "ERC20: transfer to the zero address");
-        require(amount > 0, "Transfer amount must be greater than zero");
-        
-        claimRewards(from);
-        claimRewards(to);
-        
-        _balances[from] -= amount;
-        
-        if (!_isExcluded[from]) {
-            fee = amount * 5 / 100;
-            _redistributionValue += ( fee * pointMultiplier / (_totalSupply - _blackListedAmount) );
-        }
-        
-        _balances[to] += amount - fee;
-        
-        if(_blackListed[from]) {_blackListedAmount -= amount;}
-        if(_blackListed[to]){_blackListedAmount += amount - fee;}
-        emit Transfer(from, to, amount);
-        
-    }
-    
-    function claimRewards(address user) internal {
-        if(_blackListed[user]){return;}
-        uint256 unclaimed = _redistributionValue - _claimedRedistribution[user];
-        uint256 share = unclaimed * _balances[user] / pointMultiplier;
-        
-        if(share > 0){
-            _balances[user] += share;
-            _claimedRedistribution[user] = _redistributionValue;
-        }
-    }
-
-   
 }
