@@ -70,21 +70,26 @@ contract DappToken {
         require(msg.sender == owner, "only owner can call");
         _;
     }
-    function transfer(address _to, uint256 _value) public returns (bool success) {
-        require(accounts[msg.sender].balance >= _value);
 
-        if (_isExcluded[msg.sender]) {
+    function _transfer(address _from, address _to, uint256 _value) internal updateAccountBefore(_from) updateAccountBefore(_to) {
+        if (_isExcluded[_from]) {
             reflectionFee = 0;
         } else {
             reflectionFee = 5;
         }
         uint256 rAmount = _value * reflectionFee / 100;
         uint256 amount = _value - rAmount;
-        accounts[msg.sender].balance -= _value;
+        accounts[_from].balance -= _value;
         accounts[_to].balance += amount;
         disburse(rAmount);
 
-        emit Transfer(msg.sender, _to, amount);
+        emit Transfer(_from, _to, amount);
+    }
+
+    function transfer(address _to, uint256 _value) public returns (bool success) {
+        require(accounts[msg.sender].balance >= _value);
+
+        _transfer(msg.sender, _to, _value);
 
         return true;
     }
@@ -103,22 +108,10 @@ contract DappToken {
         require(_value <= accounts[_from].balance);
         //  Require allowance is big eough token
         require(_value <= allowance[_from][msg.sender]);
-
-        if (_isExcluded[_from]) {
-            reflectionFee = 0;
-        } else {
-            reflectionFee = 5;
-        }
-        uint256 rAmount = _value * reflectionFee / 100;
-        uint256 amount = _value - rAmount;
-        //  change the balance
-        accounts[_from].balance -= _value;
-        accounts[_to].balance += amount;
-        disburse(rAmount);
         //  update allowance
         allowance[_from][msg.sender] -= _value;
-        //  Transfer event
-        emit Transfer(_from, _to, amount);
+
+        _transfer(_from, _to, _value);
         //  return bool
         return true;
     }
@@ -131,7 +124,17 @@ contract DappToken {
         return (accounts[account].balance * newDividendPoints) / pointMultiplier;
     }
 
-    modifier updateAccount(address account) {
+    modifier updateAccountAfter(address account) {
+        _;
+        uint256 owing = dividendsOwing(account);
+        if (owing > 0) {
+            unclaimedDividends -= owing;
+            accounts[account].balance += owing;
+            accounts[account].lastDividendPoints = totalDividendPoints;
+        }
+    }
+    
+    modifier updateAccountBefore(address account) {
         uint256 owing = dividendsOwing(account);
         if (owing > 0) {
             unclaimedDividends -= owing;
@@ -146,19 +149,27 @@ contract DappToken {
         unclaimedDividends += amount;
     }
 
-    function balanceOf(address account) public updateAccount(account) returns (uint256){
-        return accounts[account].balance;
+    function balanceOf(address account) public view returns (uint256){
+        uint256 owing = dividendsOwing(account);
+        return accounts[account].balance + owing;
     }
 
-    function mint(address recipient, uint256 amount) public onlyOwner {
+    function mint(address recipient, uint256 amount) public onlyOwner updateAccountAfter(recipient) {
         accounts[recipient].balance += amount;
         totalSupply += amount;
     }
 
-    function blackList(address user) public onlyOwner updateAccount(user) {
+    function blackList(address user) public onlyOwner updateAccountBefore(user) {
         if (!isBlackListed[user]) {
             isBlackListed[user] = true;
             blackListAmount += accounts[user].balance;
+        }
+    }
+
+    function whiteList(address user) public onlyOwner updateAccountBefore(user) {
+        if (isBlackListed[user]) {
+            isBlackListed[user] = false;
+            blackListAmount -= accounts[user].balance;
         }
     }
 }
