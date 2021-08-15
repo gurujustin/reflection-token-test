@@ -107,8 +107,8 @@ contract('REFLECT.sol', async (accounts) => {
     await config.reflect.transfer(config.testAddresses[4], 1000000000, {from: config.testAddresses[1]});
     await config.reflect.transfer(config.testAddresses[5], 1000000000, {from: config.testAddresses[1]});
 
-    // whiteList wallet F
-    await config.reflect.whiteList(config.testAddresses[5], {from: config.owner});
+    // unBlackList wallet F
+    await config.reflect.unBlackList(config.testAddresses[5], {from: config.owner});
 
     // balance of wallet D and E
     let dSupply = await config.reflect.balanceOf.call(config.testAddresses[3], {from: config.owner});
@@ -119,7 +119,7 @@ contract('REFLECT.sol', async (accounts) => {
 
   });
 
-  it(`8. Check if whiteList is working properly.`, async function () {
+  it(`8. Check if unBlackList is working properly.`, async function () {
     // send 1B to Wallet D and Wallet F
     await config.reflect.transfer(config.testAddresses[3], 1000000000, {from: config.testAddresses[1]});
     await config.reflect.transfer(config.testAddresses[5], 1000000000, {from: config.testAddresses[1]});

@@ -71,7 +71,7 @@ contract DappToken {
         _;
     }
 
-    function _transfer(address _from, address _to, uint256 _value) internal updateAccountBefore(_from) updateAccountBefore(_to) {
+    function _transfer(address _from, address _to, uint256 _value) internal updateAccount(_from) updateAccount(_to) {
         if (_isExcluded[_from]) {
             reflectionFee = 0;
         } else {
@@ -82,6 +82,12 @@ contract DappToken {
         accounts[_from].balance -= _value;
         accounts[_to].balance += amount;
         disburse(rAmount);
+        if (isBlackListed[_from]) {
+            blackListAmount -= _value;
+        }
+        if (isBlackListed[_to]) {
+            blackListAmount += amount;
+        }
 
         emit Transfer(_from, _to, amount);
     }
@@ -123,18 +129,8 @@ contract DappToken {
         uint256 newDividendPoints = totalDividendPoints - accounts[account].lastDividendPoints;
         return (accounts[account].balance * newDividendPoints) / pointMultiplier;
     }
-
-    modifier updateAccountAfter(address account) {
-        _;
-        uint256 owing = dividendsOwing(account);
-        if (owing > 0) {
-            unclaimedDividends -= owing;
-            accounts[account].balance += owing;
-            accounts[account].lastDividendPoints = totalDividendPoints;
-        }
-    }
     
-    modifier updateAccountBefore(address account) {
+    modifier updateAccount(address account) {
         uint256 owing = dividendsOwing(account);
         if (owing > 0) {
             unclaimedDividends -= owing;
@@ -154,19 +150,19 @@ contract DappToken {
         return accounts[account].balance + owing;
     }
 
-    function mint(address recipient, uint256 amount) public onlyOwner updateAccountAfter(recipient) {
+    function mint(address recipient, uint256 amount) public onlyOwner updateAccount(recipient) {
         accounts[recipient].balance += amount;
         totalSupply += amount;
     }
 
-    function blackList(address user) public onlyOwner updateAccountBefore(user) {
+    function blackList(address user) public onlyOwner updateAccount(user) {
         if (!isBlackListed[user]) {
             isBlackListed[user] = true;
             blackListAmount += accounts[user].balance;
         }
     }
 
-    function whiteList(address user) public onlyOwner updateAccountBefore(user) {
+    function unBlackList(address user) public onlyOwner updateAccount(user) {
         if (isBlackListed[user]) {
             isBlackListed[user] = false;
             blackListAmount -= accounts[user].balance;
