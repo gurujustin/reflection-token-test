@@ -15,7 +15,7 @@ $ truffle test
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-I've added test of blacklist feature in main_test.js.
+I've added test of blacklist and whitelist feature in main_test.js.
 
 In step 7.1), 1B is sent to wallet D, wallet E and wallet F.
 And then add wallet D and wallet F to blacklist.
