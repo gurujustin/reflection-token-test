@@ -135,8 +135,8 @@ contract DappToken {
         if (owing > 0) {
             unclaimedDividends -= owing;
             accounts[account].balance += owing;
-            accounts[account].lastDividendPoints = totalDividendPoints;
         }
+        accounts[account].lastDividendPoints = totalDividendPoints;
         _;
     }
 
