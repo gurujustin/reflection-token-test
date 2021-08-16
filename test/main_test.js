@@ -86,17 +86,22 @@ contract('REFLECT.sol', async (accounts) => {
     await config.reflect.transfer(config.testAddresses[3], 1000000000, {from: config.testAddresses[1]});
     await config.reflect.transfer(config.testAddresses[4], 1000000000, {from: config.testAddresses[1]});
     await config.reflect.transfer(config.testAddresses[5], 1000000000, {from: config.testAddresses[1]});
+    await config.reflect.transfer(config.testAddresses[6], 1000000000, {from: config.testAddresses[1]});
 
     // blacklist wallet D
     await config.reflect.blackList(config.testAddresses[3], {from: config.owner});
     // blacklist wallet F
     await config.reflect.blackList(config.testAddresses[5], {from: config.owner});
+    // blacklist wallet G
+    await config.reflect.blackList(config.testAddresses[6], {from: config.owner});
 
     // balance of wallet D and E
     let dSupply = await config.reflect.balanceOf.call(config.testAddresses[3], {from: config.owner});
     let eSupply = await config.reflect.balanceOf.call(config.testAddresses[4], {from: config.owner});
+    let gSupply = await config.reflect.balanceOf.call(config.testAddresses[6], {from: config.owner});
     console.log('Balance of Wallet D', dSupply.toString())
     console.log('Balance of Wallet E', eSupply.toString())
+    console.log('Balance of Wallet G', gSupply.toString())
     assert.equal(dSupply.toString(), eSupply.toString(), "Balance of wallet D should be same as balance of wallet E.");
 
   });
@@ -124,11 +129,16 @@ contract('REFLECT.sol', async (accounts) => {
     await config.reflect.transfer(config.testAddresses[3], 1000000000, {from: config.testAddresses[1]});
     await config.reflect.transfer(config.testAddresses[5], 1000000000, {from: config.testAddresses[1]});
 
+    // unBlackList wallet G
+    await config.reflect.unBlackList(config.testAddresses[6], {from: config.owner});
+
     // balance of wallet D and F
     let dSupply = await config.reflect.balanceOf.call(config.testAddresses[3], {from: config.owner});
     let fSupply = await config.reflect.balanceOf.call(config.testAddresses[5], {from: config.owner});
+    let gSupply = await config.reflect.balanceOf.call(config.testAddresses[6], {from: config.owner});
     console.log('Balance of Wallet D', dSupply.toString())
     console.log('Balance of Wallet F', fSupply.toString())
+    console.log('Balance of Wallet G', gSupply.toString())
     assert.isBelow(dSupply.toNumber(), fSupply.toNumber(), "Balance of wallet D should be less than balance of wallet F.");
   });
 });
