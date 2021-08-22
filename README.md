@@ -7,10 +7,12 @@ Of course, I made some change because there is no some feature such as excluded 
 -------------------------------------------------------------------------------------------------------
 
 ** install **
+
 $ npm install(yarn install)
 you have to install ganache and change test address in config file.
 
 ** start **
+
 $ truffle test
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
