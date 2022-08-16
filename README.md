@@ -15,7 +15,7 @@ you have to install ganache and change test address in config file.
 
 $ truffle test
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////
+-------------------------------------------------------------------------------------------------------
 
 I've added test of blacklist and unblacklist feature in main_test.js.
 
